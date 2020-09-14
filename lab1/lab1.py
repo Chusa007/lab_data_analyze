@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import normalize
+from sklearn.metrics import mean_squared_error
 from scipy.stats import shapiro
+from math import sqrt
 
 # Название полей по которым будет строиться датасет
 # MSSubClass - Класс объекта
@@ -17,10 +19,11 @@ from scipy.stats import shapiro
 # GarageArea - площадь гаража
 # PoolArea - площадь бассейна
 X_NAME = "MSSubClass"
-Y_NAME = "TotalBsmtSF"
+Y_NAME = "PoolArea"
 
 # Размер датасета
-SIZE_DT = 200
+SIZE_DT_START = 400
+SIZE_DT_END = 600
 
 # Масштабирование
 SCALE = 10
@@ -47,6 +50,8 @@ def draw_reg(xt: np.ndarray, yt: np.ndarray, yp: np.ndarray, color: str):
     """
     plt.scatter(xt, yt)
     plt.plot(xt, yp, color=color, linewidth="2")
+    plt.xlabel(X_NAME)
+    plt.ylabel(Y_NAME)
     plt.show()
 
 
@@ -60,7 +65,7 @@ def scale_array(arr: np.ndarray):
 
 
 # Чтение данных из файла
-ds = pd.read_csv("train.csv")[:SIZE_DT]
+ds = pd.read_csv("train.csv")[SIZE_DT_START:SIZE_DT_END]
 
 # Приводим к виду [[], [], []]. Пример: было [1, 2, 3] стало [[1], [2], [3]]
 x = ds[X_NAME].values.reshape(-1, 1)
@@ -70,11 +75,11 @@ y = ds[Y_NAME].values.reshape(-1, 1)
 # y = normalize(y, axis=0).ravel()
 
 # Рисуем по сырым данным
-draw_graph(ds)
+# draw_graph(ds)
 
 # Проверка на нормальность
-# statistic, pvalue = shapiro(y)
-# print(statistic, pvalue)
+statistic, pvalue = shapiro(y)
+print(statistic, pvalue)
 
 # Разделение данных
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=0)
@@ -84,7 +89,7 @@ regressor = LinearRegression()
 regressor.fit(x_train, y_train)
 
 # Коэф. регрессии
-print(regressor.intercept_, regressor.coef_)
+print("regressor.intercept_ = {0}, regressor.coef_ = {1}".format(regressor.intercept_, regressor.coef_))
 
 # Построение прогноза
 y_pred = regressor.predict(x_test)
@@ -96,4 +101,8 @@ df = pd.DataFrame({"Actual": y_test.flatten(), "Predicted": y_pred.flatten()})
 # plt.show()
 
 draw_reg(x_test, y_test, y_pred, "green")
-draw_reg(scale_array(x_test),scale_array(y_test), scale_array(y_pred), "red")
+draw_reg(scale_array(x_test), scale_array(y_test), scale_array(y_pred), "red")
+
+# Среднеквадратичная ошибка
+err = sqrt(mean_squared_error(x_test, y_pred))
+print("Среднеквадратичная ошибка = {}".format(err))
