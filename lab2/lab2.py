@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 
 # Переменная для хранения флага отображения графиков
-SHOW_GRAPH = True
+SHOW_GRAPH = False
 
 
 def comparison_list(test: list, pred: list) -> tuple:
@@ -66,18 +66,17 @@ def count_errors(data: dict) -> dict:
     return dict({"false_positive": false_positive, "false_negative": false_negative})
 
 
-def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray, test_size: float) -> dict:
+def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray) -> dict:
     """
     Метод для обучения модели
     :param data_set: сырые данные
     :param data: данные
-    :param test_size: размер данных
     :return: метод возвращает построенную модель
     """
     # Обучение модели классификации
     # Разделение данных
-    x_train, x_test, y_train, y_test = train_test_split(data_set, data, stratify=data, test_size=test_size, random_state=0)
-
+    x_train, x_test, y_train, y_test = train_test_split(data_set, data, stratify=data, test_size=0.33, random_state=0)
+    print(type(y_test))
     # Создание модели
     model = AdaBoostClassifier(n_estimators=100, random_state=0)
     # model = RandomForestClassifier(n_estimators=100, random_state=0, max_features='sqrt', n_jobs=-1, verbose=1)
@@ -87,10 +86,11 @@ def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray, test_size: 
 
     # Построение прогноза
     y_pred = model.predict(x_test)
+    print(type(y_pred))
 
     if SHOW_GRAPH:
         # Построение прогноза
-        df = pd.DataFrame({"Actual": y_test.flatten(), "Predicted": y_pred.flatten()})
+        df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred.flatten()})
 
         # Посмотреть на справнение прогноза и реальных данных
         df1 = df.head(20)
@@ -103,20 +103,36 @@ def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray, test_size: 
 ds = pd.read_csv("Development Index.csv")
 y = np.array(ds.pop("Development Index"))
 
-# Задаем размер тестовых данных к обучаемым
-test_size_arr = [0.33, 0.495, 0.66]
+first = y[:75]
+medium = y[75:150]
+last = y[150:]
+
+ds1_2 = ds[:150]
+y1_2 = [*first, *medium]
+
+
+ds1_3 = ds[lambda x: np.logical_or(x.index < 75, x.index >= 150)]
+y1_3 = [*last, *first]
+
+ds2_3 = ds[75:]
+y2_3 = [*medium, *last]
+
+
+ds_pair = [{"ds": ds1_2, "y": y1_2}, {"ds": ds1_3, "y": y1_3}, {"ds": ds2_3, "y": y2_3}]
+
 
 sum_err = {"false_positive": [0, 0, 0, 0], "false_negative": [0, 0, 0, 0]}
 
-for t_size in test_size_arr:
+i = 1
+for dct in ds_pair:
     # Строим модель
-    data = build_model(ds, y, t_size)
+    data = build_model(dct.get("ds"), dct.get("y"))
     res = count_errors(data)
-    print("Model №{num}\n{res}".format(num=test_size_arr.index(t_size) + 1, res=res))
+    print("Model №{num}\n{res}".format(num=i, res=res))
 
     for key, value in sum_err.items():
         sum_err[key] = [i + j for i, j in zip(res[key], value)]
-
+    i += 1
 
 print("\nСумма ошибок 1 и 2 рода по всем моделям:\n{sum}".format(sum=sum_err))
 
