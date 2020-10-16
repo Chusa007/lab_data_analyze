@@ -4,14 +4,22 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 
 # Переменная для хранения флага отображения графиков
-SHOW_GRAPH = False
+SHOW_GRAPH = True
 
+
+def test_cross(ds, y):
+    model = AdaBoostClassifier(n_estimators=100, random_state=0)
+    # передаем классификатор, X, y и кол-во фолдов=5
+    res = cross_val_score(model, ds, y, cv=5)
+    print(res)
 
 def comparison_list(test: list, pred: list) -> tuple:
     """
@@ -76,7 +84,6 @@ def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray) -> dict:
     # Обучение модели классификации
     # Разделение данных
     x_train, x_test, y_train, y_test = train_test_split(data_set, data, stratify=data, test_size=0.33, random_state=0)
-    print(type(y_test))
     # Создание модели
     model = AdaBoostClassifier(n_estimators=100, random_state=0)
     # model = RandomForestClassifier(n_estimators=100, random_state=0, max_features='sqrt', n_jobs=-1, verbose=1)
@@ -86,7 +93,6 @@ def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray) -> dict:
 
     # Построение прогноза
     y_pred = model.predict(x_test)
-    print(type(y_pred))
 
     if SHOW_GRAPH:
         # Построение прогноза
@@ -97,11 +103,14 @@ def build_model(data_set: pd.core.frame.DataFrame, data: np.ndarray) -> dict:
         df1.plot(kind="bar")
         plt.show()
 
-    return dict({"y_test": y_test, "y_pred": y_pred})
+    f1_res = f1_score(y_test, y_pred, average='micro')
+
+    return dict({"y_test": y_test, "y_pred": y_pred, "f1_res": f1_res})
 
 # Чтение данных из файла
 ds = pd.read_csv("Development Index.csv")
 y = np.array(ds.pop("Development Index"))
+
 
 first = y[:75]
 medium = y[75:150]
@@ -120,19 +129,24 @@ y2_3 = [*medium, *last]
 
 ds_pair = [{"ds": ds1_2, "y": y1_2}, {"ds": ds1_3, "y": y1_3}, {"ds": ds2_3, "y": y2_3}]
 
-
+f1_sum = 0
 sum_err = {"false_positive": [0, 0, 0, 0], "false_negative": [0, 0, 0, 0]}
 
 i = 1
 for dct in ds_pair:
     # Строим модель
     data = build_model(dct.get("ds"), dct.get("y"))
+    f1_sum += data.get("f1_res")
     res = count_errors(data)
-    print("Model №{num}\n{res}".format(num=i, res=res))
+    print("Model №{num}\nf1 = {f1}\n{res}".format(num=i, res=res, f1=data.get("f1_res")))
 
     for key, value in sum_err.items():
         sum_err[key] = [i + j for i, j in zip(res[key], value)]
     i += 1
 
-print("\nСумма ошибок 1 и 2 рода по всем моделям:\n{sum}".format(sum=sum_err))
+for key, value in sum_err.items():
+    sum_err[key] = [round(i / len(ds_pair), 2) for i in value]
 
+print("\nСумма ошибок 1 и 2 рода по всем моделям:\n{sum}\nf1 average = {f1}".format(sum=sum_err, f1=f1_sum / len(ds_pair)))
+
+# test_cross(ds, y)
