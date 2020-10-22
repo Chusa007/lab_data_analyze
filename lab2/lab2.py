@@ -12,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 
 # Переменная для хранения флага отображения графиков
-SHOW_GRAPH = True
+SHOW_GRAPH = False
 
 
 def test_cross(ds, y):
@@ -112,22 +112,54 @@ ds = pd.read_csv("Development Index.csv")
 y = np.array(ds.pop("Development Index"))
 
 
-first = y[:75]
-medium = y[75:150]
-last = y[150:]
-
-ds1_2 = ds[:150]
-y1_2 = [*first, *medium]
-
-
-ds1_3 = ds[lambda x: np.logical_or(x.index < 75, x.index >= 150)]
-y1_3 = [*last, *first]
-
-ds2_3 = ds[75:]
-y2_3 = [*medium, *last]
+first = y[:45]
+second = y[45:90]
+medium = y[90:135]
+pre_last = y[135:180]
+last = y[180:]
 
 
-ds_pair = [{"ds": ds1_2, "y": y1_2}, {"ds": ds1_3, "y": y1_3}, {"ds": ds2_3, "y": y2_3}]
+ds_without_last = ds[:180]
+y_without_last = [*first, *second, *medium, *pre_last]
+
+ds_without_pre_last = ds[lambda x: np.logical_or(x.index < 135, x.index >= 180)]
+y_without_pre_last = [*first, *second, *medium, *last]
+
+ds_without_medium = ds[lambda x: np.logical_or(x.index < 90, x.index >= 135)]
+y_without_medium = [*first, *second, *pre_last, *last]
+
+ds_without_second = ds[lambda x: np.logical_or(x.index < 45, x.index >= 90)]
+y_without_second = [*first, *medium, *pre_last, *last]
+
+ds_without_first = ds[45:]
+y_without_first = [*second, *medium, *pre_last, *last]
+
+ds_pair = [{"ds": ds_without_last, "y": y_without_last},
+           {"ds": ds_without_pre_last, "y": y_without_pre_last},
+           {"ds": ds_without_medium, "y": y_without_medium},
+           {"ds": ds_without_second, "y": y_without_second},
+           {"ds": ds_without_first, "y": y_without_first}]
+
+
+# first = y[:75]
+# medium = y[75:150]
+# last = y[150:]
+#
+# ds1_2 = ds[:150]
+# y1_2 = [*first, *medium]
+#
+# ds1_3 = ds[lambda x: np.logical_or(x.index < 75, x.index >= 150)]
+# y1_3 = [*last, *first]
+#
+# ds2_3 = ds[75:]
+# y2_3 = [*medium, *last]
+#
+# ds_pair = [{"ds": ds1_2, "y": y1_2},
+#            {"ds": ds1_3, "y": y1_3},
+#            {"ds": ds2_3, "y": y2_3}]
+
+
+
 
 f1_sum = 0
 sum_err = {"false_positive": [0, 0, 0, 0], "false_negative": [0, 0, 0, 0]}
